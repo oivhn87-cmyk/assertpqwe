@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>進んでたたかうプログラム</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: sans-serif;
+            text-align: center;
+        }
+
+        #gameCanvas {
+            border: 2px solid #555;
+            background-color: #2b2b2b;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .controls {
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #log {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            height: 30px;
+            color: #ffcc00;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>自動追撃・戦闘システム</h1>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    
+    <div class="controls">
+        <button onclick="resetGame()">ランダム位置で再スタート</button>
+    </div>
+    
+    <div id="log">準備完了</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const logElement = document.getElementById('log');
+
+        // プレイヤーオブジェクト
+        let player = {
+            x: 50,
+            y: 200,
+            size: 20,
+            speed: 2,
+            attackRange: 40,
+            color: '#3498db'
+        };
+
+        // 敵オブジェクト
+        let enemy = {
+            x: 500,
+            y: 200,
+            hp: 100,
+            maxHp: 100,
+            size: 25,
+            color: '#e74c3c'
+        };
+
+        let isAttacking = false;
+        let attackCooldown = 0;
+
+        // ゲームのリセット
+        function resetGame() {
+            player.x = 50;
+            player.y = Math.random() * (canvas.height - 100) + 50;
+            
+            enemy.x = Math.random() * (canvas.width - 200) + 150;
+            enemy.y = Math.random() * (canvas.height - 100) + 50;
+            enemy.hp = 100;
+            
+            logElement.textContent = "進撃開始！";
+        }
+
+        // メインループ
+        function gameLoop() {
+            // 画面クリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (enemy.hp > 0) {
+                // 敵とプレイヤーの距離を計算
+                let dx = enemy.x - player.x;
+                let dy = enemy.y - player.y;
+                let distance = Math.hypot(dx, dy);
+
+                // 攻撃範囲外なら敵に向かって進む
+                if (distance > player.attackRange) {
+                    player.x += (dx / distance) * player.speed;
+                    player.y += (dy / distance) * player.speed;
+                    logElement.textContent = "敵に向かって進んでいます...";
+                } else {
+                    // 攻撃範囲内に入ったら戦う
+                    if (attackCooldown <= 0) {
+                        enemy.hp -= 20; // 攻撃！
+                        isAttacking = true;
+                        attackCooldown = 30; // 攻撃間隔のクールダウン
+                        logElement.textContent = `攻撃！ 敵にダメージを与えた！（残りHP: ${Math.max(0, enemy.hp)}）`;
+                    }
+                }
+            } else {
+                logElement.textContent = "敵を倒しました！";
+            }
+
+            // クールダウン処理
+            if (attackCooldown > 0) {
+                attackCooldown--;
+            } else {
+                isAttacking = false;
+            }
+
+            // --- 描画処理 ---
+
+            // 敵の描画
+            if (enemy.hp > 0) {
+                ctx.fillStyle = enemy.color;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 敵のHPバー描画
+                ctx.fillStyle = 'red';
+                ctx.fillRect(enemy.x - 25, enemy.y - 35, 50, 6);
+                ctx.fillStyle = 'green';
+                ctx.fillRect(enemy.x - 25, enemy.y - 35, (enemy.hp / enemy.maxHp) * 50, 6);
+            }
+
+            // プレイヤーの描画
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 攻撃エフェクト（攻撃中の光）
+            if (isAttacking) {
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.attackRange, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ゲームスタート
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>
